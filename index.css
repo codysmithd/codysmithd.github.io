@@ -1,0 +1,23 @@
+body {
+    background-color: #1b1b1b;
+    color: #FFFFFF;
+    font-family: 'Open Sans', sans-serif;
+}
+
+h1 {
+    margin: 0;
+}
+
+.flex-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.content-card {
+    font-size: 200%;
+}
+
+.content-card i {
+    font-size: 70%;
+}
