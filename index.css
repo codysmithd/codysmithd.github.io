@@ -1,7 +1,7 @@
 body {
-    background-color: #1b1b1b;
+    background-color: #000000;
     color: #FFFFFF;
-    font-family: 'Open Sans', sans-serif;
+    font-family: 'Slabo 27px', serif;
 }
 
 h1 {
@@ -15,9 +15,25 @@ h1 {
 }
 
 .content-card {
-    font-size: 200%;
+    font-size: 5vmin;
+    background-color: #FFFFFF;
+    color: black;
+    padding: 2vmin;
+    margin: 2vmin;
+    border-radius: 1vmin;
+}
+.content-card i {
+    font-size: 4vmin;
 }
 
-.content-card i {
-    font-size: 70%;
+/* Non-mobile */
+@media only screen and (min-width: 992px) {
+    .content-card {
+        font-size: 2vw;
+        padding: 2vw;
+        border-radius: 0.25vw;
+    }
+    .content-card i {
+        font-size: 1.6vw;
+    }
 }
