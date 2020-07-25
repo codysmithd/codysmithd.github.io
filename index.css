@@ -12,6 +12,7 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100%;
 }
 
 .content-card {
@@ -23,6 +24,15 @@ h1 {
 }
 .content-card i {
     font-size: 4vmin;
+}
+
+#background-canvas {
+    position: fixed;
+    width: 120%;
+    height: 120%;
+    top:-10%;
+    left:-10%;
+    z-index: -1;
 }
 
 /* Non-mobile */
