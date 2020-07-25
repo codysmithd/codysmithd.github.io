@@ -1,7 +1,7 @@
 body {
     background-color: #000000;
     color: #FFFFFF;
-    font-family: 'Slabo 27px', serif;
+    font-family: 'Roboto', sans-serif;
 }
 
 h1 {
@@ -20,7 +20,6 @@ h1 {
     color: black;
     padding: 2vmin;
     margin: 2vmin;
-    border-radius: 1vmin;
 }
 .content-card i {
     font-size: 4vmin;
@@ -31,7 +30,6 @@ h1 {
     .content-card {
         font-size: 2vw;
         padding: 2vw;
-        border-radius: 0.25vw;
     }
     .content-card i {
         font-size: 1.6vw;
