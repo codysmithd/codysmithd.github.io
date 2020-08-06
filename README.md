@@ -1,2 +1,2 @@
-# codysmith.site
+# cody.cloud
 My personal website
