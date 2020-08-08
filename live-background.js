@@ -1,5 +1,5 @@
 /**
-  Simulates some points for the background of my homepage
+  Orbital simulation for the background of my homepage
   @Author Cody Smith
 */
 
@@ -8,128 +8,137 @@ const canvasContext = canvas.getContext('2d');
 function updateCanvasSize() {
     canvas.height = canvas.offsetHeight;
     canvas.width = canvas.offsetWidth;
+    canvas.centerX = Math.floor(canvas.width/2);
+    canvas.centerY = Math.floor(canvas.height/2);
 }
 updateCanvasSize();
 
-const POINT_AREA_SIZE = 100; // The box area a single point is constrained too
-const POINT_COLOR = '#424242'; // Gray 700
-const POINT_CONNECTION_COLOR = '#212121'; // Gray 800
+const POINT_SETTINGS = {
+    numberOfPoints : 500,
+    minMass : 3,
+    maxMass : 7,
+    maxConnections : 2
+}
 const TWO_PI = 2 * Math.PI;
 
-let points = []; // 2d array of points
 /**
  * Represents a point in the cloud simulation
  */
 class Point {
-    constructor(x, y) {
-        this.xStart = x * POINT_AREA_SIZE;
-        this.yStart = y * POINT_AREA_SIZE;
-        this.x = this.xStart + POINT_AREA_SIZE/2 + getRandomPointOffset();
-        this.y = this.yStart + POINT_AREA_SIZE/2 + getRandomPointOffset();
-        this.weight = Math.floor(Math.random() * 5 + 3);
+    constructor(x, y, mass) {
+        this.x = x;
+        this.y = y;
+        this.mass = mass;
+        this.velocity = {
+            x : 0,
+            y : 0
+        }
         this.connections = new Set();
     }
+
     connectTo(point) {
-        this.connections.add(point);
-        point.connections.add(this);
+        if (this.connections.size <= POINT_SETTINGS.maxConnections && point.connections.size <= POINT_SETTINGS.maxConnections) {
+            this.connections.add(point);
+            point.connections.add(this);
+        }
+    }
+
+    updatePosition() {
+        this.x += this.velocity.x;
+        this.y += this.velocity.y;
+    }
+
+    distanceTo(point) {
+        return Math.sqrt(Math.pow((this.x - point.x), 2) + Math.pow((this.y - point.y), 2));
     }
 }
 
-function getRandomPointOffset() {
-    return (Math.random() - 0.5) * 70;
-}
-
-function generatePoints() {
-    let sizeX = Math.floor(canvas.offsetWidth / POINT_AREA_SIZE);
-    let sizeY = Math.floor(canvas.offsetHeight / POINT_AREA_SIZE);
-    for (let x = 0; x < sizeX; x++) {
-        if (!points[x]) {
-            points[x] = [];
-        }
-        for (let y = 0; y < sizeY; y++) {
-            points[x][y] = new Point(x, y);
-        }
-    }
-    for (let x = 0; x < sizeX; x+=2) {
-        for (let y = 0; y < sizeY; y+=2) {
-            let point = points[x][y];
-            // Left
-            if (x - 1 >= 0 && shouldDrawConnection()) {
-                point.connectTo(points[x-1][y]);
-            }
-            // Right
-            if (x+1 < sizeX && shouldDrawConnection()) {
-                point.connectTo(points[x+1][y]);
-            }
-            // Top
-            if (y-1 >= 0 && shouldDrawConnection()) {
-                point.connectTo(points[x][y-1]);
-            }
-            // Bottom
-            if (y+1 < sizeY && shouldDrawConnection()) {
-                point.connectTo(points[x][y+1]);
-            }
-            // Top-left
-            if (y-1 >= 0 && x-1 >= 0 && shouldDrawConnection()) {
-                point.connectTo(points[x-1][y-1]);
-            }
-            // Top-right
-            if (y-1 >= 0 && x+1 < sizeX && shouldDrawConnection()) {
-                point.connectTo(points[x+1][y-1]);
-            }
-            // Bottom-left
-            if (y+1 < sizeY && x-1 >= 0 && shouldDrawConnection()) {
-                point.connectTo(points[x-1][y+1]);
-            }
-            // Bottom-right
-            if (y+1 < sizeY && x+1 < sizeX && shouldDrawConnection()) {
-                point.connectTo(points[x+1][y+1]);
-            }
-        }
+function getRandomPosition() {
+    let largerScale = Math.max(canvas.width, canvas.height);
+    let smallerScale = Math.min(canvas.width, canvas.height);
+    let delta = largerScale - smallerScale;
+    let offset = delta / 2;
+    let largerRandom = Math.random() * largerScale;
+    let smallerRandom = (Math.random() * largerScale) - offset;
+    if (canvas.width > canvas.height) {
+        return [largerRandom, smallerRandom];
+    } else {
+        return [smallerRandom, largerRandom];
     }
 }
 
-function shouldDrawConnection() {
-    return Math.random() > 0.15;
+function generatePoints(numberOfPoints) {
+    const points = [];
+    for (let n = 0; n < numberOfPoints; n++) {
+        let [x, y] = getRandomPosition();
+        let mass = Math.floor((Math.random() * (POINT_SETTINGS.maxMass - POINT_SETTINGS.minMass)) + POINT_SETTINGS.minMass);
+        points.push(new Point(x, y, mass));
+    }
+
+    return points;
 }
 
 function drawPoint(point) {
     canvasContext.beginPath();
-    canvasContext.arc(point.x, point.y, point.weight, 0, TWO_PI);
+    canvasContext.arc(point.x, point.y, point.mass, 0, TWO_PI);
     canvasContext.fill();
 }
 
-function drawConnections(point) {
+function drawConnections(point, visitedPoints) {
     point.connections.forEach(connectedPoint => {
-        canvasContext.beginPath();
-        canvasContext.moveTo(point.x, point.y);
-        canvasContext.lineTo(connectedPoint.x, connectedPoint.y);
-        canvasContext.stroke();
+        if (!visitedPoints.has(connectedPoint)) {
+            canvasContext.beginPath();
+            canvasContext.moveTo(point.x, point.y);
+            canvasContext.lineTo(connectedPoint.x, connectedPoint.y);
+            canvasContext.stroke();
+        }
     });
 }
 
-function drawPoints() {
-    canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-    canvasContext.fillStyle = POINT_COLOR;
-    canvasContext.strokeStyle = POINT_CONNECTION_COLOR;
+function orbitForce(point) {
+    let dX = point.x - canvas.centerX;
+    let dY = point.y - canvas.centerY;
 
-    for (let x = 0; x < points.length; x+=2) {
-        for (let y = 0; y < points[x].length; y+=2) {
-            drawConnections(points[x][y]);
-        }
-    }
-    for (let x = 0; x < points.length; x++) {
-        for (let y = 0; y < points[x].length; y++) {
-            drawPoint(points[x][y]);
-        }
-    }
+    let theta = Math.atan2(dX, dY);
+
+    point.velocity.x = -Math.cos(theta) / point.mass;
+    point.velocity.y = Math.sin(theta) / point.mass;
 }
 
-generatePoints();
-drawPoints();
+function updatePoints(points) {
+    points.forEach((point) => {
+        orbitForce(point);
+        point.updatePosition();
+    });
+}
+
+function render(points) {
+    updatePoints(points);
+    canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+
+    canvasContext.fillStyle = '#424242';
+
+    let visitedPoints = new Set();
+    let toVisit = [...points];
+    let currentPoint = toVisit.pop();
+
+    while (currentPoint != null) {
+        drawConnections(currentPoint, visitedPoints);
+        currentPoint = toVisit.pop();
+    }
+
+    points.forEach(point => {
+        drawPoint(point);
+    });
+}
+
+const points = generatePoints(POINT_SETTINGS.numberOfPoints);
+
+// Render Loop
+let renderLoop = window.setInterval(render.bind(this, points), 16);
 
 window.onresize = () => {
     updateCanvasSize();
-    generatePoints();
-    drawPoints();
 }
+
+render(points);
