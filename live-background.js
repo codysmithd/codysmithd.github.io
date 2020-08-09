@@ -3,23 +3,75 @@
   @Author Cody Smith
 */
 
-const canvas = document.getElementById('background-canvas');
-const canvasContext = canvas.getContext('2d');
-function updateCanvasSize() {
-    canvas.height = canvas.offsetHeight;
-    canvas.width = canvas.offsetWidth;
-    canvas.centerX = Math.floor(canvas.width/2);
-    canvas.centerY = Math.floor(canvas.height/2);
-}
-updateCanvasSize();
+/**
+ * Wrapper around the canvas. The simulation is square, so abstracts out transforms. Also handles drawling.
+ */
+class SimulationContainer {
+    static TWO_PI = 2 * Math.PI;
+    static settings = {
+        minPointMass : 3,
+        maxPointMass : 7,
+        pixelsPerPoint : 150,
+        deviationFactor : 75
+    };
 
-const POINT_SETTINGS = {
-    numberOfPoints : 500,
-    minMass : 3,
-    maxMass : 7,
-    maxConnections : 2
+    constructor (canvas) {
+        this.canvas = canvas;
+        this.context = canvas.getContext('2d');
+        this.updateDimensions();
+    }
+
+    clear () {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawPoint (point) {
+        let _fillStyle = this.context.fillStyle;
+        this.context.fillStyle = point.color;
+        this.context.beginPath();
+        this.context.arc(point.x, point.y, point.mass, 0, SimulationContainer.TWO_PI);
+        this.context.fill();
+        this.context.fillStyle = _fillStyle;
+    }
+
+    drawConnection (point, otherPoint) {
+        this.context.beginPath();
+        this.context.moveTo(point.x, point.y);
+        this.context.lineTo(otherPoint.x, otherPoint.y);
+        this.context.stroke();
+    }
+
+    updateDimensions () {
+        this.canvas.height = this.canvas.offsetHeight;
+        this.canvas.width = this.canvas.offsetWidth;
+
+        this.centerX = this.canvas.width / 2;
+        this.centerY = this.canvas.height / 2;
+    }
+
+    generatePoints () {
+        const size = Math.max(this.canvas.height, this.canvas.width);
+        const startX = (this.canvas.width - size)/2;
+        const startY = (this.canvas.height - size)/2;
+        const halfDeviationFactor = SimulationContainer.settings.deviationFactor / 2;
+        const massMinMaxDifference = SimulationContainer.settings.maxPointMass - SimulationContainer.settings.minPointMass;
+
+        const points = [];
+        for (let x = startX; x < size; x+= SimulationContainer.settings.pixelsPerPoint) {
+            for (let y = startY; y < size; y+= SimulationContainer.settings.pixelsPerPoint) {
+                // Random chance to not generate a point
+                if (Math.random() > 0.05) {
+                    let xOffset = (Math.random() * SimulationContainer.settings.deviationFactor) - halfDeviationFactor;
+                    let yOffset = (Math.random() * SimulationContainer.settings.deviationFactor) - halfDeviationFactor;
+                    let mass = Math.floor(Math.random() * massMinMaxDifference + massMinMaxDifference);
+                    points.push(new Point(x + xOffset, y + yOffset, mass));
+                }
+            }
+        }
+
+        return points;
+    }
 }
-const TWO_PI = 2 * Math.PI;
 
 /**
  * Represents a point in the cloud simulation
@@ -29,6 +81,7 @@ class Point {
         this.x = x;
         this.y = y;
         this.mass = mass;
+        this.color = '#424242';
         this.velocity = {
             x : 0,
             y : 0
@@ -37,67 +90,19 @@ class Point {
     }
 
     connectTo(point) {
-        if (this.connections.size <= POINT_SETTINGS.maxConnections && point.connections.size <= POINT_SETTINGS.maxConnections) {
-            this.connections.add(point);
-            point.connections.add(this);
-        }
+        this.connections.add(point);
+        point.connections.add(this);
     }
 
     updatePosition() {
         this.x += this.velocity.x;
         this.y += this.velocity.y;
     }
-
-    distanceTo(point) {
-        return Math.sqrt(Math.pow((this.x - point.x), 2) + Math.pow((this.y - point.y), 2));
-    }
 }
 
-function getRandomPosition() {
-    let largerScale = Math.max(canvas.width, canvas.height);
-    let smallerScale = Math.min(canvas.width, canvas.height);
-    let delta = largerScale - smallerScale;
-    let offset = delta / 2;
-    let largerRandom = Math.random() * largerScale;
-    let smallerRandom = (Math.random() * largerScale) - offset;
-    if (canvas.width > canvas.height) {
-        return [largerRandom, smallerRandom];
-    } else {
-        return [smallerRandom, largerRandom];
-    }
-}
-
-function generatePoints(numberOfPoints) {
-    const points = [];
-    for (let n = 0; n < numberOfPoints; n++) {
-        let [x, y] = getRandomPosition();
-        let mass = Math.floor((Math.random() * (POINT_SETTINGS.maxMass - POINT_SETTINGS.minMass)) + POINT_SETTINGS.minMass);
-        points.push(new Point(x, y, mass));
-    }
-
-    return points;
-}
-
-function drawPoint(point) {
-    canvasContext.beginPath();
-    canvasContext.arc(point.x, point.y, point.mass, 0, TWO_PI);
-    canvasContext.fill();
-}
-
-function drawConnections(point, visitedPoints) {
-    point.connections.forEach(connectedPoint => {
-        if (!visitedPoints.has(connectedPoint)) {
-            canvasContext.beginPath();
-            canvasContext.moveTo(point.x, point.y);
-            canvasContext.lineTo(connectedPoint.x, connectedPoint.y);
-            canvasContext.stroke();
-        }
-    });
-}
-
-function orbitForce(point) {
-    let dX = point.x - canvas.centerX;
-    let dY = point.y - canvas.centerY;
+function applyOrbitForce(point, container) {
+    let dX = point.x - container.centerX;
+    let dY = point.y - container.centerY;
 
     let theta = Math.atan2(dX, dY);
 
@@ -105,40 +110,29 @@ function orbitForce(point) {
     point.velocity.y = Math.sin(theta) / point.mass;
 }
 
-function updatePoints(points) {
+function updatePoints(points, container) {
     points.forEach((point) => {
-        orbitForce(point);
+        applyOrbitForce(point, container);
         point.updatePosition();
     });
 }
 
-function render(points) {
-    updatePoints(points);
-    canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-
-    canvasContext.fillStyle = '#424242';
-
-    let visitedPoints = new Set();
-    let toVisit = [...points];
-    let currentPoint = toVisit.pop();
-
-    while (currentPoint != null) {
-        drawConnections(currentPoint, visitedPoints);
-        currentPoint = toVisit.pop();
-    }
+/** Function to render simulation - designed to be bound */
+function _render(simulationContainer, points) {
+    updatePoints(points, simulationContainer);
+    simulationContainer.clear();
 
     points.forEach(point => {
-        drawPoint(point);
+        simulationContainer.drawPoint(point);
     });
 }
 
-const points = generatePoints(POINT_SETTINGS.numberOfPoints);
-
-// Render Loop
-let renderLoop = window.setInterval(render.bind(this, points), 16);
+const simulationContainer = new SimulationContainer(document.getElementById('background-canvas'));
+const points = simulationContainer.generatePoints();
+const renderFn = _render.bind(null, simulationContainer, points)
 
 window.onresize = () => {
-    updateCanvasSize();
+    simulationContainer.updateDimensions();
 }
 
-render(points);
+window.setInterval(renderFn, 16);
