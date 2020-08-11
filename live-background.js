@@ -5,11 +5,11 @@
 
 const TWO_PI = 2 * Math.PI;
 const SETTINGS = {
-    minPointMass : 3,
-    maxPointMass : 7,
+    minPointMass : 1,
+    maxPointMass : 2.5,
 
     // How many pixels should be between each point to start
-    pixelsPerPoint : 150,
+    pixelsPerPoint : 80,
 
     // Factor to deviate the starting positions by +/-
     deviationFactor : 75,
