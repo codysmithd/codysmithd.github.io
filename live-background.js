@@ -1,3 +1,4 @@
+'use strict';
 /**
   Orbital simulation for the background of my homepage
   @Author Cody Smith
@@ -9,14 +10,13 @@ const SETTINGS = {
     maxPointMass : 2.5,
 
     // How many pixels should be between each point to start
-    pixelsPerPoint : 80,
+    pixelsPerPoint : 60,
 
     // Factor to deviate the starting positions by +/-
-    deviationFactor : 75,
-
-    // Time in ms for the render loop interval
-    renderLoopRate : 16
+    deviationFactor : 75
 };
+
+const colorGrey = '#424242';
 
 /**
  * Container for the simulation state
@@ -42,14 +42,8 @@ class SimulationContainer {
         this.context.fillStyle = _fillStyle;
     }
 
-    drawConnection (point, otherPoint) {
-        this.context.beginPath();
-        this.context.moveTo(point.x, point.y);
-        this.context.lineTo(otherPoint.x, otherPoint.y);
-        this.context.stroke();
-    }
-
     drawPoints () {
+        this.context.fillStyle = colorGrey;
         for (const point of this.points) {
             this.drawPoint(point);
         }
@@ -63,19 +57,10 @@ class SimulationContainer {
     }
 
     applyOrbitForce (point) {
-        let dX = point.x - this.centerX;
-        let dY = point.y - this.centerY;
+        const theta = Math.atan2(point.x - this.centerX, point.y - this.centerY);
 
-        let theta = Math.atan2(dX, dY);
-
-        point.velocity.x = -Math.cos(theta) / point.mass;
-        point.velocity.y = Math.sin(theta) / point.mass;
-    }
-
-    render () {
-        this.updatePoints();
-        this.clear();
-        this.drawPoints();
+        point.velocityX = -Math.cos(theta) / point.mass;
+        point.velocityY = Math.sin(theta) / point.mass;
     }
 
     updateDimensions () {
@@ -98,7 +83,7 @@ class SimulationContainer {
             for (let y = startY; y < size; y+= SETTINGS.pixelsPerPoint) {
                 let xOffset = (Math.random() * SETTINGS.deviationFactor) - halfDeviationFactor;
                 let yOffset = (Math.random() * SETTINGS.deviationFactor) - halfDeviationFactor;
-                let mass = Math.floor(Math.random() * massMinMaxDifference + massMinMaxDifference);
+                let mass = Math.floor((Math.random() * massMinMaxDifference) + SETTINGS.minPointMass);
                 points.push(new Point(x + xOffset, y + yOffset, mass));
             }
         }
@@ -115,22 +100,13 @@ class Point {
         this.x = x;
         this.y = y;
         this.mass = mass;
-        this.color = '#424242';
-        this.velocity = {
-            x : 0,
-            y : 0
-        }
-        this.connections = new Set();
-    }
-
-    connectTo (point) {
-        this.connections.add(point);
-        point.connections.add(this);
+        this.velocityX = 0;
+        this.velocityY = 0;
     }
 
     updatePosition () {
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
+        this.x += this.velocityX;
+        this.y += this.velocityY;
     }
 }
 
@@ -140,4 +116,10 @@ window.onresize = () => {
     simulationContainer.updateDimensions();
 }
 
-window.setInterval(() => simulationContainer.render(), 16);
+const _render = () => {
+    requestAnimationFrame(_render);
+    simulationContainer.updatePoints();
+    simulationContainer.clear();
+    simulationContainer.drawPoints();
+}
+_render();
