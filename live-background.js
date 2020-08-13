@@ -59,17 +59,15 @@ class SimulationContainer {
     }
 
     drawPoints () {
-        for (const point of this.points) {
-            this.drawPoint(point);
-        }
+        this.points.forEach(this.drawPoint.bind(this));
     }
 
     updatePoints() {
-        for (const point of this.points) {
+        this.points.forEach(point => {
             this.applyOrbitForce(point);
             this.applyActivation(point);
             point.update();
-        }
+        });
     }
 
     applyOrbitForce (point) {
@@ -95,8 +93,11 @@ class SimulationContainer {
 
     generatePoints () {
         const size = Math.max(this.canvas.height, this.canvas.width);
+
+        // We start at 0 or half the difference between the max size so we have a centered square
         const startX = (this.canvas.width - size)/2;
         const startY = (this.canvas.height - size)/2;
+
         const halfDeviationFactor = SETTINGS.deviationFactor / 2;
         const massMinMaxDifference = SETTINGS.maxPointMass - SETTINGS.minPointMass;
 
