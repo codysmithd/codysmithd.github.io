@@ -160,10 +160,7 @@ window.onresize = () => {
 }
 
 window.setInterval(() => simulationContainer.updatePoints(), MS_PER_FRAME);
-
-const _render = () => {
-    requestAnimationFrame(_render);
+window.setInterval(() => {
     simulationContainer.clear();
     simulationContainer.drawPoints();
-}
-_render();
+}, MS_PER_FRAME);
