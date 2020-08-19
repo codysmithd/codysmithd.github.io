@@ -15,13 +15,13 @@ const SETTINGS = {
     activation : {
 
         // The maximum RGB value when a point gets activated
-        max : 100,
+        max : 110,
 
         // What percent of the points should get activated per second
         percentageActivatedPerSecond : 0.5,
 
         // How long should it take for a point to get fully activated (in ms)
-        activationTime : 2000
+        activationTime : 1000
     },
 
     // How many pixels should be between each point to start
